@@ -55,20 +55,20 @@ def generate_string_art_route(): # Renamed to avoid conflict with imported funct
         # sobel_y = img.filter(ImageFilter.Kernel((3,3), [-1,-2,-1,0,0,0,1,2,1], 1, 0))
         # For now, we'll just keep it as is after resize for simplicity in this step
             
-            img_array = np.array(img) # Shape (height, width)
+        img_array = np.array(img) # Shape (height, width)
             
-            app.logger.info(f"Image processed: mode={img.mode}, size={img.size}, nail_count={nail_count}, line_count={line_count}")
+        app.logger.info(f"Image processed: mode={img.mode}, size={img.size}, nail_count={nail_count}, line_count={line_count}")
 
             # Generate the string art path
             # Note: generate_art expects image_array where darker pixels have lower values
             # The function itself inverts it, so we pass the direct output of Pillow's 'L' mode.
-            nail_path_list = generate_art(img_array, nail_count, line_count)
+        nail_path_list = generate_art(img_array, nail_count, line_count)
             
-            nail_path_str = "-".join(map(str, nail_path_list))
+        nail_path_str = "-".join(map(str, nail_path_list))
             
-            app.logger.info(f"Generated path: {nail_path_str[:100]}...") # Log a snippet
+        app.logger.info(f"Generated path: {nail_path_str[:100]}...") # Log a snippet
 
-            return jsonify({
+        return jsonify({
                 "message": "String art generated successfully.",
                 "nail_path": nail_path_str,
                 "processed_image_shape": img_array.shape
