@@ -54,9 +54,11 @@ def calculate_line_darkness(image_array, p1, p2, max_dim):
     """Calculates the sum of pixel values along the line between p1 and p2."""
     pixels_on_line = get_line_pixels(p1, p2, max_dim)
     darkness = 0
+    if not pixels_on_line:
+        return 0
     for x, y in pixels_on_line:
-        darkness += image_array[y, x] # Accessing NumPy array as [row, col] which is [y, x]
-    return darkness / len(pixels_on_line) if pixels_on_line else 0
+        darkness += image_array[y, x] # image_array is the grayscale Sobel edge map
+    return darkness # Return sum instead of average
 
 
 def generate_art(image_array, num_nails, num_lines):
@@ -162,7 +164,7 @@ def generate_art(image_array, num_nails, num_lines):
         chosen_p2 = nail_coords[best_next_nail_idx]
         pixels_on_chosen_line = get_line_pixels(chosen_p1, chosen_p2, image_size)
         for x,y in pixels_on_chosen_line:
-            line_mask[y,x] *= 0.6 # Adjusted masking factor
+            line_mask[y,x] *= 0.75 # Less aggressive reduction
 
         current_nail_idx = best_next_nail_idx
         path.append(current_nail_idx)
