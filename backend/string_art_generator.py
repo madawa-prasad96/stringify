@@ -70,19 +70,49 @@ def generate_art(image_array, num_nails, num_lines):
     """
     
     # Convert input numpy array to PIL Image
+    # (Assuming image_array is the grayscaled, contrast-enhanced image from app.py)
     img_pil = Image.fromarray(image_array.astype(np.uint8), mode='L')
 
-    # Apply Sobel filter (using FIND_EDGES)
-    edge_image_pil = img_pil.filter(ImageFilter.FIND_EDGES)
-    
-    # Convert back to NumPy array. Values will be 0 (no edge) or 255 (edge).
-    processed_image = np.array(edge_image_pil)
-    
-    print(f"Max pixel value in edge image: {np.max(processed_image)}")
-    print(f"Unique values in edge image: {np.unique(processed_image, return_counts=True)}")
+    # 1. Apply Gaussian Blur
+    # A small radius is often good for edge detection preprocessing.
+    # Radius 1 is a good starting point. If edges are too noisy, try a slightly larger radius.
+    # If edges are too smooth and weak, try a smaller radius like 0.5 or remove blur.
+    blurred_img = img_pil.filter(ImageFilter.GaussianBlur(radius=1)) 
+    # print("Applied Gaussian Blur to the image for edge detection.") # Optional: for debugging
 
-    # The existing algorithm expects higher values to be more important.
-    # FIND_EDGES makes edges 255 and background 0, which is suitable.
+    # 2. Apply Sobel operator manually for X and Y gradients
+    # These kernels detect changes in intensity along X and Y directions.
+    sobel_x_kernel = ImageFilter.Kernel((3,3), [-1,0,1,-2,0,2,-1,0,1], 1, 0)
+    sobel_y_kernel = ImageFilter.Kernel((3,3), [-1,-2,-1,0,0,0,1,2,1], 1, 0)
+
+    img_sobel_x = blurred_img.filter(sobel_x_kernel)
+    img_sobel_y = blurred_img.filter(sobel_y_kernel)
+
+    # Convert PIL images of gradients to NumPy arrays for calculation
+    np_sobel_x = np.array(img_sobel_x, dtype=np.float32)
+    np_sobel_y = np.array(img_sobel_y, dtype=np.float32)
+
+    # 3. Calculate Gradient Magnitude
+    # np.hypot calculates sqrt(x^2 + y^2), which is the magnitude of the gradient.
+    # This represents the strength of the edge.
+    gradient_magnitude = np.hypot(np_sobel_x, np_sobel_y)
+
+    # 4. Normalize the gradient magnitude to the 0-255 range
+    # This ensures that the edge strength is represented consistently.
+    max_grad_val = np.max(gradient_magnitude)
+    if max_grad_val > 0:
+        # Scale values to 0-1, then multiply by 255
+        gradient_magnitude = (gradient_magnitude / max_grad_val) * 255.0
+    
+    # Convert the final processed image to uint8, as expected by subsequent parts of the code.
+    processed_image = gradient_magnitude.astype(np.uint8)
+    
+    # Diagnostic prints (updated)
+    print(f"Max pixel value in normalized Sobel edge image: {np.max(processed_image)}")
+    unique_vals, counts = np.unique(processed_image, return_counts=True)
+    # Print only a sample of unique values if there are too many, for brevity
+    sample_size = min(10, len(unique_vals))
+    print(f"Unique values in Sobel edge image (sample of {sample_size}): {unique_vals[:sample_size]} with counts {counts[:sample_size]}")
 
     image_size = processed_image.shape[0] # Should be same as image_array.shape[0]
     nail_coords = get_nail_coordinates(num_nails, image_size)

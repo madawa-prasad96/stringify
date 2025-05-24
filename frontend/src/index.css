@@ -3,9 +3,9 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  /* color-scheme: light dark; Removed for single light theme */
+  color: #000000; /* Default text color to black */
+  /* background-color: #242424; Removed dark background */
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -28,7 +28,7 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
-  background-color: #f0f2f5; /* A light gray background */
+  background-color: #FFFFFF; /* Theme: White background */
 }
 
 h1 {
@@ -43,35 +43,19 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: #f0f0f0; /* Light gray button background */
+  color: #000000; /* Black text on button */
+  border: 1px solid #cccccc; /* Subtle border for buttons */
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: border-color 0.25s, background-color 0.25s;
 }
 button:hover {
-  border-color: #646cff;
+  border-color: #000000; /* Darker border on hover */
+  background-color: #e0e0e0; /* Slightly darker button on hover */
 }
 button:focus,
 button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  outline: 4px auto -webkit-focus-ring-color; /* Default focus outline */
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    /* background-color: #ffffff; Ensure body background takes precedence or adjust as needed */
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-  /* If you want the body background to be #f0f2f5 universally, 
-     and :root background for specific elements, this is fine.
-     If :root background-color was meant for the overall page background under light scheme,
-     then that would override the body's #f0f2f5.
-     Given the task, we want #f0f2f5 on the body.
-     The :root background-color: #ffffff for light scheme is commented out to ensure body style applies.
-     Alternatively, one could remove background-color from :root light scheme if body is the target.
-  */
-}
+/* Removed @media (prefers-color-scheme: light) block as we enforce a single light theme */

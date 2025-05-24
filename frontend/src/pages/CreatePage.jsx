@@ -206,7 +206,7 @@ function CreatePage() {
     setIsLoading(false); // Backend has responded, path is available
     setIsAnimating(true); // Start animation phase
 
-    const pathIndices = generatedPath.split('-').map(Number);
+    const pathIndices = generatedPath.split('-').map(val => parseInt(val, 10)); // Ensure base 10
     if (pathIndices.length < 2) {
         setIsAnimating(false); // Not enough points to animate
         setProgressPercentage(100); // Or 0, depending on desired outcome for invalid path
@@ -229,11 +229,26 @@ function CreatePage() {
 
     let currentLine = 0;
     const linesToDraw = [];
-    for (let i = 0; i < pathIndices.length - 1; i++) {
-      linesToDraw.push({ from: pathIndices[i], to: pathIndices[i+1] });
+    if (pathIndices.length >= 2) {
+      for (let i = 0; i < pathIndices.length - 1; i++) {
+        const fromNail = pathIndices[i];
+        const toNail = pathIndices[i+1];
+        // Check if indices are valid numbers and within bounds
+        if (!isNaN(fromNail) && !isNaN(toNail) && 
+            fromNail >= 0 && fromNail < nailCount &&
+            toNail >= 0 && toNail < nailCount) {
+          linesToDraw.push({ from: fromNail, to: toNail });
+        } else {
+          console.warn(`Invalid nail index found in path: from ${fromNail}, to ${toNail}. Skipping line.`);
+        }
+      }
     }
 
-    if (linesToDraw.length === 0) return;
+    if (linesToDraw.length === 0) {
+        setIsAnimating(false); // No valid lines to draw
+        setProgressPercentage(100); // Consider this "complete" if no lines
+        return;
+    }
 
     function animate() {
       if (currentLine < linesToDraw.length) {
@@ -264,29 +279,36 @@ function CreatePage() {
     
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = 'black';
-    ctx.lineWidth = 0.5;
+    ctx.strokeStyle = '#000000'; // Theme: Line color
+    ctx.lineWidth = 0.2; // Reduced line thickness
 
     // Draw nails
+    ctx.fillStyle = '#000000'; // Theme: Nail circle fill color
     previewNailCoords.forEach(coord => {
       ctx.beginPath();
       ctx.arc(coord.x, coord.y, 2, 0, 2 * Math.PI); // Nail radius 2px
-      ctx.fill();
+      ctx.fill(); 
     });
 
     // Draw lines
     drawnLines.forEach(line => {
-      if (previewNailCoords[line.from] && previewNailCoords[line.to]) {
+      // Ensure line and its properties are valid, and indices are within bounds
+      if (line && typeof line.from === 'number' && typeof line.to === 'number' &&
+          line.from >= 0 && line.from < previewNailCoords.length && 
+          line.to >= 0 && line.to < previewNailCoords.length &&
+          previewNailCoords[line.from] && previewNailCoords[line.to]) {
         ctx.beginPath();
         ctx.moveTo(previewNailCoords[line.from].x, previewNailCoords[line.from].y);
         ctx.lineTo(previewNailCoords[line.to].x, previewNailCoords[line.to].y);
         ctx.stroke();
+      } else {
+        console.warn('Skipping drawing of invalid line:', line);
       }
     });
 
     // --- Add Nail Numbering Logic ---
     if (previewNailCoords.length > 0) {
-      ctx.fillStyle = '#333'; // Text color
+      ctx.fillStyle = '#000000'; // Theme: Text color
       ctx.font = '10px Arial'; // Text font
       
       const center_x = canvas.width / 2;
@@ -344,7 +366,7 @@ function CreatePage() {
     >
       <div style={{ flex: 1 }}>
         <h1>Create String Art</h1>
-        <div style={{ marginBottom: '20px', border: '2px dashed #ccc', padding: '20px', textAlign: 'center' }}>
+        <div style={{ marginBottom: '20px', border: '2px dashed #000000', padding: '20px', textAlign: 'center' }}> {/* Theme: Dashed border */}
           <input type="file" accept="image/png, image/jpeg" onChange={onSelectFile} />
           <p>Or drag and drop an image here</p>
         </div>
@@ -372,11 +394,11 @@ function CreatePage() {
         
         {/* Static preview of the cropped image - THIS SHOULD ALWAYS BE VISIBLE if a crop is completed */}
         {completedCrop && imgSrc && (
-          <div style={{ marginBottom: '20px', border:'1px solid #eee', padding: '10px'}}>
+          <div style={{ marginBottom: '20px', border:'1px solid #000000', padding: '10px'}}> {/* Theme: Border */}
               <h4>Your Cropped Image (Grayscaled)</h4>
               <canvas 
                   ref={previewCroppedCanvasRef}
-                  style={{ border: '1px solid black', maxWidth: '100%', marginTop: '10px' }}
+                  style={{ border: '1px solid #000000', maxWidth: '100%', marginTop: '10px' }} /* Theme: Canvas border */
                   // Fixed size for simplicity, or dynamic based on crop
                   // width={previewCanvasSize} 
                   // height={previewCanvasSize}
@@ -408,7 +430,7 @@ function CreatePage() {
             ref={stringArtPreviewCanvasRef} 
             width={previewCanvasSize} 
             height={previewCanvasSize} 
-            style={{ border: '1px solid #ccc' }}
+            style={{ border: '1px solid #000000' }} /* Theme: Canvas border */
         />
         {isLoading && <p style={{fontWeight: 'bold'}}>Backend processing: Generating string art path... This might take a moment.</p>}
         {isAnimating && <p>Animating preview... {progressPercentage}%</p>}
