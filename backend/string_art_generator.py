@@ -1,6 +1,7 @@
 # backend/string_art_generator.py
 import numpy as np
 import math
+from PIL import Image, ImageFilter # Added Image and ImageFilter
 
 def get_nail_coordinates(num_nails, image_size_square):
     """Calculates coordinates for nails placed in a circle on a square image."""
@@ -68,10 +69,22 @@ def generate_art(image_array, num_nails, num_lines):
     If original image has dark as 0 and white as 255, invert it.
     """
     
-    # Invert image so that darker original pixels have higher values
-    processed_image = 255 - image_array 
-    image_size = processed_image.shape[0] # Assuming square image
+    # Convert input numpy array to PIL Image
+    img_pil = Image.fromarray(image_array.astype(np.uint8), mode='L')
 
+    # Apply Sobel filter (using FIND_EDGES)
+    edge_image_pil = img_pil.filter(ImageFilter.FIND_EDGES)
+    
+    # Convert back to NumPy array. Values will be 0 (no edge) or 255 (edge).
+    processed_image = np.array(edge_image_pil)
+    
+    print(f"Max pixel value in edge image: {np.max(processed_image)}")
+    print(f"Unique values in edge image: {np.unique(processed_image, return_counts=True)}")
+
+    # The existing algorithm expects higher values to be more important.
+    # FIND_EDGES makes edges 255 and background 0, which is suitable.
+
+    image_size = processed_image.shape[0] # Should be same as image_array.shape[0]
     nail_coords = get_nail_coordinates(num_nails, image_size)
     
     current_nail_idx = 0
@@ -119,7 +132,7 @@ def generate_art(image_array, num_nails, num_lines):
         chosen_p2 = nail_coords[best_next_nail_idx]
         pixels_on_chosen_line = get_line_pixels(chosen_p1, chosen_p2, image_size)
         for x,y in pixels_on_chosen_line:
-            line_mask[y,x] *= 0.85 # Reduce score for future lines crossing this path (tune factor)
+            line_mask[y,x] *= 0.6 # Adjusted masking factor
 
         current_nail_idx = best_next_nail_idx
         path.append(current_nail_idx)

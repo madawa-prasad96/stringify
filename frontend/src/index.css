@@ -28,6 +28,7 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  background-color: #f0f2f5; /* A light gray background */
 }
 
 h1 {
@@ -57,7 +58,7 @@ button:focus-visible {
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
-    background-color: #ffffff;
+    /* background-color: #ffffff; Ensure body background takes precedence or adjust as needed */
   }
   a:hover {
     color: #747bff;
@@ -65,4 +66,12 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
+  /* If you want the body background to be #f0f2f5 universally, 
+     and :root background for specific elements, this is fine.
+     If :root background-color was meant for the overall page background under light scheme,
+     then that would override the body's #f0f2f5.
+     Given the task, we want #f0f2f5 on the body.
+     The :root background-color: #ffffff for light scheme is commented out to ensure body style applies.
+     Alternatively, one could remove background-color from :root light scheme if body is the target.
+  */
 }
