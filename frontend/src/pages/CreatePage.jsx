@@ -21,7 +21,8 @@ function CreatePage() {
 
   // API and Preview State
   const [generatedPath, setGeneratedPath] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // True when waiting for backend
+  const [isAnimating, setIsAnimating] = useState(false); // True when frontend is animating the preview
   const [apiError, setApiError] = useState(null);
   
   const [previewNailCoords, setPreviewNailCoords] = useState([]);
@@ -158,7 +159,8 @@ function CreatePage() {
       return;
     }
 
-    setIsLoading(true);
+    setIsLoading(true); // Start backend loading
+    setIsAnimating(false); // Reset animation state
     setApiError(null);
     setGeneratedPath(null);
     setDrawnLines([]);
@@ -181,22 +183,35 @@ function CreatePage() {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
         setGeneratedPath(response.data.nail_path);
-        // Setup for animation will be triggered by useEffect watching generatedPath
+        // setIsLoading(false); // Backend loading done
+        // setIsAnimating(true); // Animation will start via useEffect
       } catch (err) {
         setApiError(err.response?.data?.error || 'Failed to generate string art.');
         console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
+        setIsLoading(false); // Stop loading on error
+      } 
+      // Removed finally block for setIsLoading(false) here, 
+      // it's handled after animation or if generatedPath is not set.
     }, 'image/png');
   };
   
   // Effect for animating the string art drawing
   useEffect(() => {
-    if (!generatedPath || !stringArtPreviewCanvasRef.current) return;
+    if (!generatedPath || !stringArtPreviewCanvasRef.current) {
+      setIsLoading(false); // Ensure loading stops if path is invalid or missing
+      setIsAnimating(false);
+      return;
+    }
+    
+    setIsLoading(false); // Backend has responded, path is available
+    setIsAnimating(true); // Start animation phase
 
     const pathIndices = generatedPath.split('-').map(Number);
-    if (pathIndices.length < 2) return;
+    if (pathIndices.length < 2) {
+        setIsAnimating(false); // Not enough points to animate
+        setProgressPercentage(100); // Or 0, depending on desired outcome for invalid path
+        return;
+    }
 
     // Calculate nail coordinates for the preview canvas
     const canvas = stringArtPreviewCanvasRef.current;
@@ -226,9 +241,19 @@ function CreatePage() {
         setProgressPercentage(Math.round(((currentLine + 1) / linesToDraw.length) * 100));
         currentLine++;
         setTimeout(animate, 20); // Adjust delay for animation speed
+      } else {
+        setProgressPercentage(100); // Ensure it hits 100%
+        setIsAnimating(false); // Animation finished
       }
     }
     animate();
+    
+    // Cleanup function in case component unmounts or dependencies change mid-animation
+    return () => {
+        // Potentially clear any running timeouts if animate used a timeoutRef
+        // For this simple setTimeout, it might not be strictly necessary unless animations are very long
+        // or component re-renders frequently with changing generatedPath/nailCount.
+    };
 
   }, [generatedPath, nailCount]); // Rerun if nailCount changes for new coords
 
@@ -258,7 +283,57 @@ function CreatePage() {
         ctx.stroke();
       }
     });
-  }, [drawnLines, previewNailCoords]);
+
+    // --- Add Nail Numbering Logic ---
+    if (previewNailCoords.length > 0) {
+      ctx.fillStyle = '#333'; // Text color
+      ctx.font = '10px Arial'; // Text font
+      
+      const center_x = canvas.width / 2;
+      const center_y = canvas.height / 2;
+      const textOffsetRadius = 10; // How far from the nail circle to place the text center
+
+      for (let i = 0; i < previewNailCoords.length; i++) {
+        if (i === 0 || i % 20 === 0) { // Display for nail 0 and every 20th nail
+          const nailCoord = previewNailCoords[i];
+          let textX = nailCoord.x;
+          let textY = nailCoord.y;
+
+          // Calculate angle from center to nail to position text outwards
+          const angle = Math.atan2(nailCoord.y - center_y, nailCoord.x - center_x);
+          
+          textX += Math.cos(angle) * textOffsetRadius;
+          textY += Math.sin(angle) * textOffsetRadius;
+
+          // Adjust textAlign and textBaseline based on quadrant for better placement
+          // Small epsilon for floating point comparison to center
+          const epsilon = 0.1; 
+          if (Math.abs(nailCoord.x - center_x) < epsilon) { // Nail is at top or bottom center
+            ctx.textAlign = 'center';
+            if (nailCoord.y < center_y) { // Top nail
+                ctx.textBaseline = 'bottom';
+                textY -= 2; // Minor adjustment to prevent overlap with nail circle
+            } else { // Bottom nail
+                ctx.textBaseline = 'top';
+                textY += 2; // Minor adjustment
+            }
+          } else if (nailCoord.x < center_x) { // Left side
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            textX -= 2; // Minor adjustment
+          } else { // Right side
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            textX += 2; // Minor adjustment
+          }
+          
+          ctx.fillText(i.toString(), textX, textY);
+        }
+      }
+    }
+    // --- End Nail Numbering Logic ---
+
+  }, [drawnLines, previewNailCoords]); // nailCount is implicitly handled as previewNailCoords depends on it
 
 
   return (
@@ -274,8 +349,10 @@ function CreatePage() {
           <p>Or drag and drop an image here</p>
         </div>
 
-        {imgSrc && (
+        {/* Conditional block for ReactCrop - Interactive Cropper */}
+        {(!isLoading && !isAnimating && !generatedPath) && imgSrc && (
           <div style={{ marginBottom: '20px' }}>
+            <h3>Crop Your Image (1:1 Aspect Ratio)</h3>
             <ReactCrop
               crop={crop}
               onChange={(_, percentCrop) => setCrop(percentCrop)}
@@ -293,9 +370,10 @@ function CreatePage() {
           </div>
         )}
         
+        {/* Static preview of the cropped image - THIS SHOULD ALWAYS BE VISIBLE if a crop is completed */}
         {completedCrop && imgSrc && (
           <div style={{ marginBottom: '20px', border:'1px solid #eee', padding: '10px'}}>
-              <h3>Preview Cropped Image (Grayscaled)</h3>
+              <h4>Your Cropped Image (Grayscaled)</h4>
               <canvas 
                   ref={previewCroppedCanvasRef}
                   style={{ border: '1px solid black', maxWidth: '100%', marginTop: '10px' }}
@@ -332,9 +410,9 @@ function CreatePage() {
             height={previewCanvasSize} 
             style={{ border: '1px solid #ccc' }}
         />
-        {isLoading && !generatedPath && <p style={{fontWeight: 'bold'}}>Backend processing: Generating string art path... This might take a moment.</p>}
-        {isLoading && generatedPath && <p>Animating preview... {progressPercentage}%</p>}
-        {!isLoading && generatedPath && <p>Progress: {progressPercentage}%</p>}
+        {isLoading && <p style={{fontWeight: 'bold'}}>Backend processing: Generating string art path... This might take a moment.</p>}
+        {isAnimating && <p>Animating preview... {progressPercentage}%</p>}
+        {!isLoading && !isAnimating && generatedPath && <p>Progress: {progressPercentage}% (Completed)</p>}
         <h3>Generated Path:</h3>
         <textarea 
             readOnly 

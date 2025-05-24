@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS # Import CORS
-from PIL import Image, ImageFilter
+from PIL import Image, ImageOps, ImageFilter # Ensured ImageOps is here
 import numpy as np
 import io
 import os
@@ -47,13 +47,10 @@ def generate_string_art_route(): # Renamed to avoid conflict with imported funct
         standard_size = (300, 300)
         img = img.resize(standard_size, Image.Resampling.LANCZOS)
 
-        # 3. (Optional) Apply edge detection - Placeholder
-        # For actual edge detection, you might use:
-        # img = img.filter(ImageFilter.FIND_EDGES)
-        # Or more advanced Sobel:
-        # sobel_x = img.filter(ImageFilter.Kernel((3,3), [-1,0,1,-2,0,2,-1,0,1], 1, 0))
-        # sobel_y = img.filter(ImageFilter.Kernel((3,3), [-1,-2,-1,0,0,0,1,2,1], 1, 0))
-        # For now, we'll just keep it as is after resize for simplicity in this step
+        # --- Add Autocontrast Here ---
+        img = ImageOps.autocontrast(img)
+        app.logger.info("Applied autocontrast to the image.")
+        # --- End of Autocontrast ---
             
         img_array = np.array(img) # Shape (height, width)
             
